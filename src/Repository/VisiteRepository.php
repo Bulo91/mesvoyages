@@ -59,6 +59,10 @@ class VisiteRepository extends ServiceEntityRepository
         $this->getEntityManager()->flush();
     }
     
+    public function add(Visite $visite): void {
+        $this->getEntityManager()->persist($visite);
+        $this->getEntityManager()->flush();
+    }
     
     //    /**
     //     * @return Visite[] Returns an array of Visite objects
