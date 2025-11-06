@@ -7,8 +7,13 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Vich\UploaderBundle\Mapping\Annotation as Vich;
+use Symfony\Component\HttpFoundation\File\File;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ORM\Entity(repositoryClass: VisiteRepository::class)]
+#[Vich\Uploadable]
 class Visite
 {
     #[ORM\Id]
@@ -37,11 +42,24 @@ class Visite
     #[ORM\Column(nullable: true)]
     private ?int $tempmax = null;
 
+    #[Vich\UploadableField(mapping: 'visites', fileNameProperty: 'imageName', size: 'imageSize')]
+    private ?File $imageFile = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?string $imageName = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $imageSize = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $updatedAt = null;
+
     /**
      * @var Collection<int, Environnement>
      */
     #[ORM\ManyToMany(targetEntity: Environnement::class)]
     private Collection $environnements;
+    
 
     public function __construct()
     {
@@ -145,8 +163,35 @@ class Visite
         }
         
     }
+    
+    public function getImageFile(): ?File {
+        return $this->imageFile;
+    }
 
-    /**
+    public function getImageName(): ?string {
+        return $this->imageName;
+    }
+
+    public function getImageSize(): ?int {
+        return $this->imageSize;
+    }
+
+    public function setImageFile(?File $imageFile): void {
+        $this->imageFile = $imageFile;
+        if(null !== $imageFile){
+            $this->updatedAt = new \DateTimeImmutable();
+        }
+    }
+
+    public function setImageName(?string $imageName): void {
+        $this->imageName = $imageName;
+    }
+
+    public function setImageSize(?int $imageSize): void {
+        $this->imageSize = $imageSize;
+    }
+
+        /**
      * @return Collection<int, Environnement>
      */
     public function getEnvironnements(): Collection
@@ -169,4 +214,28 @@ class Visite
 
         return $this;
     }
+    
+    #[Assert\Callback]
+    public function validate(ExecutionContextInterface $context) {
+        $file = $this->getImageFile();
+
+        // Si aucun fichier n’est sélectionné, on ne fait rien
+        if ($file != null && $file != "") {
+            // Vérifie la taille du fichier (500 Ko max)
+            $poids = @filesize($file);
+            if ($poids != false && $poids > 512000) {
+                $context->buildViolation("Cette image est trop lourde (500 Ko max)")
+                    ->atPath('imageFile')
+                    ->addViolation();
+            }
+            // Vérifie que le fichier est bien une image
+            $infosImage = @getimagesize($file);
+            if ($infosImage == false) {
+                $context->buildViolation("Ce fichier n’est pas une image")
+                    ->atPath('imageFile')
+                    ->addViolation();
+            }
+        }
+    }
+
 }
