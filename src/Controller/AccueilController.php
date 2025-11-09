@@ -7,6 +7,7 @@
 
 namespace App\Controller;
 
+use App\Repository\VisiteRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -19,7 +20,11 @@ use Symfony\Component\Routing\Annotation\Route;
  */
 class AccueilController extends AbstractController{
     #[Route('/', name: 'accueil')]
-    public function index(): Response{
-        return $this->render("pages/accueil.html.twig");
+    public function index(VisiteRepository $repository): Response{
+        
+        $visites = $repository->findLastVisites(2);
+        return $this->render("pages/accueil.html.twig", [
+            'visites' => $visites,
+        ]);
     }
 }
